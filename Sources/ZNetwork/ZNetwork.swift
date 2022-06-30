@@ -38,7 +38,7 @@ public class ZNetwork {
             case .failure(let error):
                 completion(.failure(NetworkError.serverError(error.localizedDescription)))
             }
-        }
+        }.resume()
     }
     
     /// Parses a `Data` object into a JSON object.
