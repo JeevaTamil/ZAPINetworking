@@ -9,7 +9,7 @@ public class ZNetwork {
         self.urlSession = urlSession
     }
     
-    func execute<T: Codable>(request: RequestProtocol, completion: @escaping (Result<T, Error>) -> Void) {
+    public func execute<T: Codable>(request: RequestProtocol, completion: @escaping (Result<T, Error>) -> Void) {
         guard let urlReq = request.urlRequest(with: environment) else {
             completion(.failure(NetworkError.badRequest("Bad URL request")))
             return
