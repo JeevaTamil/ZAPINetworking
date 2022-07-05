@@ -9,6 +9,8 @@ import Foundation
 
 /// Enum of API Errors
 public enum NetworkError: Error {
+    /// No internet connectivity
+    case noInternetConnection
     /// Encoding issue when trying to send data.
     case encodingError(String?)
     /// No data recieved from the server.

@@ -9,6 +9,10 @@ public class ZNetwork {
         self.urlSession = urlSession
     }
     
+    /// Handles the data response that is expected as a Codable object output.
+    /// - Parameters:
+    ///   - request: enum of endpoint which confirms to the `RequestProtocol`.
+    ///   - completion: Completion handler.
     public func execute<T: Codable>(request: RequestProtocol, completion: @escaping (Result<T, Error>) -> Void) {
         guard let urlReq = request.urlRequest(with: environment) else {
             completion(.failure(NetworkError.badRequest("Bad URL request")))
@@ -39,6 +43,60 @@ public class ZNetwork {
                 completion(.failure(NetworkError.serverError(error.localizedDescription)))
             }
         }.resume()
+    }
+    
+    
+    
+    /// Handles the data response that is expected as a JSON object output.
+    /// - Parameters:
+    ///   - request: enum of endpoint which confirms to the `RequestProtocol`.
+    ///   - completion: Completion handler.
+    public func execute(request: RequestProtocol, completion: @escaping (Result<Any? , Error>) -> Void) {
+        guard let urlReq = request.urlRequest(with: environment) else {
+            completion(.failure(NetworkError.badRequest("Bad URL request")))
+            return
+        }
+        
+        self.urlSession.dataTask(with: urlReq) { data, response, error in
+            guard let urlResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+            let result = self.verify(data: data, urlResponse: urlResponse, error: error)
+            
+            switch result {
+            case .success(let data):
+                let parseResult = self.parse(data: data as? Data)
+                switch parseResult {
+                case .success(let json):
+                    DispatchQueue.main.async {
+                        completion(.success(json))
+                    }
+                case .failure(let error):
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.parseError(error.localizedDescription)))
+                    }
+                }
+            case .failure(let error):
+                completion(.failure(NetworkError.serverError(error.localizedDescription)))
+            }
+        }
+    }
+    
+    /// Parses a `Data` object into a JSON object.
+    /// - Parameter data: `Data` instance to be parsed.
+    /// - Returns: A `Result` instance.
+    private func parse(data: Data?) -> Result<Any, Error> {
+        guard let data = data else {
+            return .failure(NetworkError.invalidResponse)
+        }
+        
+        do {
+            let json = try JSONSerialization.jsonObject(with: data, options: .mutableContainers)
+            return .success(json)
+        } catch (let exception) {
+            return .failure(NetworkError.parseError(exception.localizedDescription))
+        }
     }
     
     /// Parses a `Data` object into a JSON object.
