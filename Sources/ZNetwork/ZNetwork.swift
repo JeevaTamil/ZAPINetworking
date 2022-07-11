@@ -45,6 +45,43 @@ public class ZNetwork {
         }.resume()
     }
     
+    /// Handles the data response that is expected as a Codable object output.
+    /// - Parameters:
+    ///   - request: enum of endpoint which confirms to the `RequestProtocol`.
+    ///   - completion: Completion handler.
+    public func execute<T: Codable>(request: RequestProtocol, accessToken: String, completion: @escaping (Result<T, Error>) -> Void) {
+        guard var urlReq = request.urlRequest(with: environment) else {
+            completion(.failure(NetworkError.badRequest("Bad URL request")))
+            return
+        }
+        urlReq.setValue("Zoho-oauthtoken \(accessToken)", forHTTPHeaderField: "Authorization")
+        
+        self.urlSession.dataTask(with: urlReq) { data, response, error in
+            guard let urlResponse = response as? HTTPURLResponse else {
+                completion(.failure(NetworkError.invalidResponse))
+                return
+            }
+            let result = self.verify(data: data, urlResponse: urlResponse, error: error)
+            
+            switch result {
+            case .success(let data):
+                let parsedResult: Result<T, Error> = self.parse(data: data as? Data)
+                switch parsedResult {
+                case .success(let result):
+                    DispatchQueue.main.async {
+                        completion(.success(result))
+                    }
+                case .failure(let error):
+                    DispatchQueue.main.async {
+                        completion(.failure(NetworkError.parseError(error.localizedDescription)))
+                    }
+                }
+            case .failure(let error):
+                completion(.failure(NetworkError.serverError(error.localizedDescription)))
+            }
+        }.resume()
+    }
+    
     
     
     /// Handles the data response that is expected as a JSON object output.
