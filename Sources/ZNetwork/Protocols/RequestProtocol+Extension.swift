@@ -22,8 +22,8 @@ public extension RequestProtocol {
 
         // Append all related properties.
         request.httpMethod = method.rawValue
-        //request.allHTTPHeaderFields = headers
-        //request.httpBody = jsonBody
+        request.allHTTPHeaderFields = headers
+        request.httpBody = jsonBody
 
         return request
     }
